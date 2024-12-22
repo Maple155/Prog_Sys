@@ -93,7 +93,7 @@ public class TableStorage {
     // Vérifie si le mot est un type valide
     private static boolean isValidDataType(String type) {
         // Ajouter les types valides ici
-        return type.equalsIgnoreCase("Integer") ||
+        return  type.equalsIgnoreCase("Integer") ||
                 type.equalsIgnoreCase("String") ||
                 type.equalsIgnoreCase("Float") ||
                 type.equalsIgnoreCase("Double");
@@ -228,16 +228,17 @@ public class TableStorage {
             File dataFile = new File(directoryPath, tableName + ".data");
             File schemaFile = new File(directoryPath, tableName + ".schema");
 
-            if (!dataFile.exists()) {
-                System.out.println("Aucune donnée disponible pour la table '" + tableName + "'.");
-                return null;
+            if (!schemaFile.exists()) {
+                throw new Exception("Table " + tableName + " introuvable.");         
+            } else if (!dataFile.exists()) {
+                throw new Exception("Aucune donnée disponible pour la table '" + tableName + "'.");
             }
 
             try (BufferedReader dataReader = new BufferedReader(new FileReader(schemaFile))) {
                 String line;
                 while ((line = dataReader.readLine()) != null) {
-                    String[] nameType = splitString(line);
-                    Domaine d = new Domaine(toUpperCase(nameType[1]), Integer.parseInt(nameType[2]));
+                    String[] nameType = line.split("\\s+");
+                    Domaine d = new Domaine(nameType[1].toUpperCase(), Integer.parseInt(nameType[2]));
                     Attribut a = new Attribut(nameType[0], d);
 
                     data.add(a);
@@ -248,7 +249,7 @@ public class TableStorage {
             try (BufferedReader dataReader = new BufferedReader(new FileReader(dataFile))) {
                 String line;
                 while ((line = dataReader.readLine()) != null) {
-                    String[] splitLine = splitCSV(line);
+                    String[] splitLine = splitData(line);
                     ArrayList<Object> value = new ArrayList<Object>();
                     Object a = null;
                     for (int i = 0; i < splitLine.length; i++) {
@@ -300,9 +301,9 @@ public class TableStorage {
 
                 table.add("\nNom de la table : " + tableName);
                 while ((line = dataReader.readLine()) != null) {
-                    String[] nameType = splitString(line);
+                    String[] nameType = line.split("\\s+");
 
-                    Domaine d = new Domaine(toUpperCase(nameType[1]), Integer.parseInt(nameType[2]));
+                    Domaine d = new Domaine(nameType[1].toUpperCase(), Integer.parseInt(nameType[2]));
                     Attribut a = new Attribut(nameType[0], d);
 
                     table.add(a.getNom_attribut() + " : " + a.getDomaine().getType_attribut() + "("
@@ -325,25 +326,17 @@ public class TableStorage {
 
 
         if (dataFile.delete() &&  schemaFile.delete()) {
-            return "\nQUERY OK , Suppression terminé";
+            return "\n QUERY OK , Suppression terminé";
         }
 
-        return "\nErreur lors de la suppression de la table";
+        return "\n Erreur lors de la suppression de la table";
     }
 
-    public static String[] splitString(String input) {
-        return input.split("\\s+"); // Divise sur un ou plusieurs espaces
-    }
-
-    public static String[] splitCSV(String input) {
+    public static String[] splitData(String input) {
         // Supprimer les guillemets simples uniquement s'ils existent
         input = input.replace("'", "");
         // Diviser la chaîne en fonction de la virgule
         return input.split(",");
-    }
-
-    public static String toUpperCase(String input) {
-        return input.toUpperCase();
     }
 
 }

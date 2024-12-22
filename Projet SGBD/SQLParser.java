@@ -16,70 +16,81 @@ public class SQLParser {
         Map<String, Object> result = new HashMap<>();
         String[] tokens = sql.trim().split("\\s+");
 
-        if (tokens[0].equalsIgnoreCase("DROP") && !tokens[1].equalsIgnoreCase("DATABASE")) {
-            return parseDropTable(tokens);
+        if (tokens[0].equalsIgnoreCase("DROP")) {
+            if (tokens[1].equalsIgnoreCase("TABLE")) {
+                result = parseDropTable(tokens);
+            } else if (tokens[1].equalsIgnoreCase("DATABASE")) {
+                result = parseDropDatabase(tokens);
+            }
         } else if (tokens[0].equalsIgnoreCase("DESCRIBE")) {
-            return parseDescribeTable(tokens);
+            result = parseDescribeTable(tokens);
         } else if (tokens[0].equalsIgnoreCase("SELECT")) {
-            return parseSelect(tokens);
+            result = parseSelect(tokens);
         } else if (tokens[0].equalsIgnoreCase("INSERT")) {
-            return parseInsert(sql);
-        } else if (tokens[0].equalsIgnoreCase("CREATE") && tokens[1].equalsIgnoreCase("TABLE")) {
-            return parseCreateTable(sql);
+            result = parseInsert(sql);
+        } else if (tokens[0].equalsIgnoreCase("CREATE")) {
+            if (tokens[1].equalsIgnoreCase("TABLE")) {
+                result = parseCreateTable(sql);
+            } else if (tokens[1].equalsIgnoreCase("DATABASE")) {
+                result = parseCreateDatabase(tokens);
+            }
         } else if (tokens[0].equalsIgnoreCase("UPDATE")) {
-            return parseUpdateCommand(sql);
+            result = parseUpdateCommand(sql);
         } else if (tokens[0].equalsIgnoreCase("DELETE")) {
-            return parseDeleteCommand(sql);
+            result = parseDeleteCommand(sql);
         } else if (tokens[0].equalsIgnoreCase("USE")) {
-            return parseUseDatabase(tokens);
-        } else if (tokens[0].equalsIgnoreCase("SHOW") && tokens[1].equalsIgnoreCase("DATABASES")) {
-            return parseShowDatabases(tokens);
-        } else if (tokens[0].equalsIgnoreCase("DROP") && tokens[1].equalsIgnoreCase("DATABASE")) {
-            return parseDropDatabase(tokens);
-        } else if (tokens[0].equalsIgnoreCase("CREATE") && tokens[1].equalsIgnoreCase("DATABASE")) {
-            return parseCreateDatabase(tokens);
+            result = parseUseDatabase(tokens);
+        } else if (tokens[0].equalsIgnoreCase("SHOW")) {
+            if (tokens[1].equalsIgnoreCase("DATABASES")) {
+                result = parseShowDatabases(tokens);
+            } else if (tokens[1].equalsIgnoreCase("TABLES")) {
+                result = parseShowTables(tokens);
+            }
         } else {
             throw new IllegalArgumentException("Commande SQL non reconnue : " + sql);
         }
-    }
 
+        return result;
+    }
 
     public static Map<String, Object> parseUseDatabase(String[] tokens) {
         Map<String, Object> result = new HashMap<>();
-    
+
         if (tokens.length != 2) {
             throw new IllegalArgumentException("Commande USE incorrecte. Syntaxe attendue : USE <database>");
         }
-    
+
         result.put("command", "USE");
         result.put("database_name", tokens[1]);
-    
+
         return result;
     }
-    
-    
+
     public static Map<String, Object> parseCreateDatabase(String[] tokens) {
         Map<String, Object> result = new HashMap<>();
         result.put("command", "CREATE DATABASE");
-        result.put("database_name", tokens[2]); 
+        result.put("database_name", tokens[2]);
         return result;
     }
-    
 
     public static Map<String, Object> parseShowDatabases(String[] tokens) {
         Map<String, Object> result = new HashMap<>();
         result.put("command", "SHOW DATABASES");
         return result;
     }
-    
+
+    public static Map<String, Object> parseShowTables(String[] tokens) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("command", "SHOW TABLES");
+        return result;
+    }
+
     public static Map<String, Object> parseDropDatabase(String[] tokens) {
         Map<String, Object> result = new HashMap<>();
         result.put("command", "DROP DATABASE");
-        result.put("database_name", tokens[2]); 
+        result.put("database_name", tokens[2]);
         return result;
     }
-    
-
 
     // Méthode pour analyser une commande UPDATE
     public static Map<String, Object> parseUpdateCommand(String sqlCommand) {
@@ -474,10 +485,9 @@ public class SQLParser {
             result = selectAll(tokens);
         } else if (tokens[1].startsWith("AVG") || tokens[1].startsWith("SUM") || tokens[1].startsWith("MIN")
                 || tokens[1].startsWith("MAX")) {
-    
+
             result = calculateAggregate(tokens);
-        }
-        else if (!tokens[1].startsWith("AVG") || !tokens[1].startsWith("SUM") || !tokens[1].startsWith("MIN")
+        } else if (!tokens[1].startsWith("AVG") || !tokens[1].startsWith("SUM") || !tokens[1].startsWith("MIN")
                 || !tokens[1].startsWith("MAX") || !tokens[1].equals("*")) {
 
             result = selectProjection(tokens);

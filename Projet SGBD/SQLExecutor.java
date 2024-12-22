@@ -11,81 +11,88 @@ public class SQLExecutor {
 
     private static String DATABASE_DIRECTORY = Function.readConf("config/conf.txt", "DATABASE");
 
-
     // Méthode principale pour exécuter la commande SQL
     public static String executeSQL(String sqlCommand, String directoryPath) {
 
         String result = "";
 
-        try {
+        if (Function.exists(directoryPath)) {
 
-            Map<String, Object> parsedSQL = SQLParser.parse(sqlCommand);
+            try {
 
-            // Identifier et exécuter la commande en fonction de son type
-            String commandType = (String) parsedSQL.get("command");
+                Map<String, Object> parsedSQL = SQLParser.parse(sqlCommand);
 
-            switch (commandType.toUpperCase()) {
-                case "SELECT":
-                    result += executeSelect(parsedSQL, directoryPath);
-                    break;
-                case "INSERT":
-                    result += executeInsert(parsedSQL, directoryPath);
-                    break;
-                case "CREATE":
-                    result += executeCreateTable(parsedSQL,directoryPath);
-                    break;
-                case "DESCRIBE":
-                    result += executeDescribe(parsedSQL, directoryPath);
-                    break;
-                case "DROP":
-                    result += executeDropTable(parsedSQL, directoryPath);
-                    break;
-                case "UPDATE":
-                    result += executeUpdate(parsedSQL, directoryPath);
-                    break;
-                case "DELETE":
-                    result += executeDelete(parsedSQL, directoryPath);
-                    break;
-                case "USE":
-                    result += executeUseDatabase(parsedSQL);
-                case "SHOW DATABASES":
-                    result += executeShowDatabases();
-                    break;
-                case "DROP DATABASE":
-                    result += executeDropDatabase(parsedSQL);
-                    break;
-                case "CREATE DATABASE":
-                    result += executeCreateDatabase(parsedSQL);
-                    break;
-                default:
-                    result += "Erreur : Commande SQL non supportée : " + commandType;
-                    break;
+                // Identifier et exécuter la commande en fonction de son type
+                String commandType = (String) parsedSQL.get("command");
+
+                switch (commandType.toUpperCase()) {
+                    case "SELECT":
+                        result += executeSelect(parsedSQL, directoryPath);
+                        break;
+                    case "INSERT":
+                        result += executeInsert(parsedSQL, directoryPath);
+                        break;
+                    case "CREATE":
+                        result += executeCreateTable(parsedSQL, directoryPath);
+                        break;
+                    case "DESCRIBE":
+                        result += executeDescribe(parsedSQL, directoryPath);
+                        break;
+                    case "DROP":
+                        result += executeDropTable(parsedSQL, directoryPath);
+                        break;
+                    case "UPDATE":
+                        result += executeUpdate(parsedSQL, directoryPath);
+                        break;
+                    case "DELETE":
+                        result += executeDelete(parsedSQL, directoryPath);
+                        break;
+                    case "USE":
+                        result += executeUseDatabase(parsedSQL);
+                    case "SHOW DATABASES":
+                        result += executeShowDatabases();
+                        break;
+                    case "SHOW TABLES":
+                        System.out.println("1");
+                        result += executeShowTables(directoryPath);
+                        break;
+                    case "DROP DATABASE":
+                        result += executeDropDatabase(parsedSQL);
+                        break;
+                    case "CREATE DATABASE":
+                        result += executeCreateDatabase(parsedSQL);
+                        break;
+                    default:
+                        result += "Erreur : Commande SQL non supportée : " + commandType;
+                        break;
+                }
+            } catch (IllegalArgumentException e) {
+                e.printStackTrace();
+                result += "Erreur d'analyse SQL : " + e.getMessage();
+            } catch (Exception e) {
+                e.printStackTrace();
+                result += "Erreur inattendue executeSQL: " + e.getMessage() + "\nCommande : " + sqlCommand;
             }
-        } catch (IllegalArgumentException e) {
-            e.printStackTrace();
-            result += "Erreur d'analyse SQL : " + e.getMessage();
-        } catch (Exception e) {
-            e.printStackTrace();
-            result += "Erreur inattendue executeSQL: " + e.getMessage() + "\nCommande : " + sqlCommand;
+        } else {
+            result += "Base de donnée introuvable";
         }
 
         return result;
     }
 
-
     public static String executeShowDatabases() {
         File databaseRoot = new File(DATABASE_DIRECTORY);
-    
+
         if (!databaseRoot.exists() || !databaseRoot.isDirectory()) {
             return "Erreur : Le répertoire principal des bases de données est introuvable.";
         }
-    
+
         // Lister les bases de données (sous-dossiers dans le répertoire principal)
         File[] directories = databaseRoot.listFiles(File::isDirectory);
         if (directories == null || directories.length == 0) {
             return "Aucune base de données disponible.";
         }
-    
+
         StringBuilder result = new StringBuilder("Bases de données disponibles :\n");
         for (File dir : directories) {
             result.append("- ").append(dir.getName()).append("\n");
@@ -93,16 +100,29 @@ public class SQLExecutor {
         return result.toString();
     }
 
+    public static String executeShowTables(String directoryPath) {
+        String result = "";
+
+        String allTables = Function.showTables(directoryPath);
+
+        if (allTables.isEmpty()) {
+            result += "Aucune tables toruver !!";
+        } else {
+            result += allTables;
+        }
+
+        return result;
+    }
 
     public static String executeCreateDatabase(Map<String, Object> parsedCommand) {
         String databaseName = (String) parsedCommand.get("database_name");
-    
+
         File databaseDirectory = new File(DATABASE_DIRECTORY + databaseName);
-    
+
         if (databaseDirectory.exists()) {
             return "Erreur : La base de données '" + databaseName + "' existe déjà.";
         }
-    
+
         // Création du dossier pour la base de données
         if (databaseDirectory.mkdirs()) {
             return "Base de données '" + databaseName + "' créée avec succès.";
@@ -110,8 +130,7 @@ public class SQLExecutor {
             return "Erreur : Impossible de créer la base de données '" + databaseName + "'.";
         }
     }
-    
-    
+
     public static String executeUseDatabase(Map<String, Object> parsedCommand) {
         String databaseName = (String) parsedCommand.get("database_name");
 
@@ -122,22 +141,23 @@ public class SQLExecutor {
         }
 
         try {
-            Function.modifyLastLine("config/conf.txt", databaseName+"/");
+            Function.modifyLastLine("config/conf.txt", databaseName + "/");
             return "Base de données '" + databaseName + "' utilisée.";
         } catch (Exception e) {
-            return "Erreur : Impossible de mettre à jour la configuration pour la base de données '" + databaseName + "'.";
+            return "Erreur : Impossible de mettre à jour la configuration pour la base de données '" + databaseName
+                    + "'.";
         }
     }
 
     public static String executeDropDatabase(Map<String, Object> parsedCommand) {
         String databaseName = (String) parsedCommand.get("database_name");
-    
+
         File databaseDirectory = new File(DATABASE_DIRECTORY + databaseName);
-    
+
         if (!databaseDirectory.exists() || !databaseDirectory.isDirectory()) {
             return "Erreur : La base de données '" + databaseName + "' n'existe pas.";
         }
-    
+
         // Supprimer récursivement le dossier
         try {
             Function.deleteDirectory(databaseDirectory);
@@ -146,8 +166,6 @@ public class SQLExecutor {
             return "Erreur : Impossible de supprimer la base de données '" + databaseName + "'.";
         }
     }
-
-    
 
     // Exécution de la commande SELECT
     public static String executeSelect(Map<String, Object> parsedSQL, String directoryPath) {
@@ -232,7 +250,7 @@ public class SQLExecutor {
                     resultat += result.afficheRelationToString();
                 } else if (parsedSQL.get("need").toString().contains("SUM")) {
                     Relation result = f.getSum(table, parsedSQL.get("need").toString());
-                
+
                     resultat += result.afficheRelationToString();
                 }
 
@@ -453,11 +471,10 @@ public class SQLExecutor {
         TableStorage tableStorage = new TableStorage(rel, directoryPath);
 
         try {
-            Relation table = tableStorage.readData(); // Lire les données de la table
-
+            Relation table = tableStorage.readData(); 
             result += table.afficheRelationToString();
             result += "\n (" + table.getNupl().size() + ") ligne(s) selectionnés";
-            
+
             return result;
         } catch (Exception e) {
             e.printStackTrace();
@@ -607,7 +624,7 @@ public class SQLExecutor {
     }
 
     // Exécution de la commande CREATE TABLE
-    public static String executeCreateTable(Map<String, Object> parsedSQL,String directoryPath) {
+    public static String executeCreateTable(Map<String, Object> parsedSQL, String directoryPath) {
 
         String result = "";
 
@@ -754,7 +771,7 @@ public class SQLExecutor {
 
 }
 
-/* 
+/*
  * CREATE TABLE test1 (ID INTEGER 100, NOM STRING 255)
  * 
  * INSERT INTO test1 (ID, NOM) VALUES (1, Archi)
@@ -767,7 +784,7 @@ public class SQLExecutor {
  * INSERT INTO test2 (ID, NOM) VALUES (2, Algo)
  * INSERT INTO test2 (ID, NOM) VALUES (3, Math)
  * 
-*/
+ */
 
 /*
  * CREATE TABLE Table_name (Attribute1 Attribute1_type Limite1, Attribute2

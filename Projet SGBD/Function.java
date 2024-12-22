@@ -8,9 +8,13 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Set;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.regex.Pattern; 
 import relation.*;
 
 public class Function {
@@ -49,7 +53,6 @@ public class Function {
         return null;
     }
 
-
     public static void modifyLastLine(String filePath, String newLastLine) throws Exception {
         List<String> lines = new ArrayList<>();
 
@@ -62,14 +65,12 @@ public class Function {
             System.err.println("Erreur lors de la lecture du fichier : " + e.getMessage());
         }
 
-        
         if (!lines.isEmpty()) {
-            lines.set(lines.size() - 1,"PATH : " +newLastLine); 
+            lines.set(lines.size() - 1, "PATH : " + newLastLine);
         } else {
             System.out.println("Le fichier est vide. Ajout de la ligne PATH.");
-            lines.add(newLastLine); 
+            lines.add(newLastLine);
         }
-
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
             for (String line : lines) {
@@ -81,9 +82,7 @@ public class Function {
         }
     }
 
-
-    public static void deleteDirectory(File directory) throws IOException 
-    {
+    public static void deleteDirectory(File directory) throws IOException {
         if (directory.isDirectory()) {
             File[] files = directory.listFiles();
             if (files != null) {
@@ -97,6 +96,69 @@ public class Function {
         }
     }
 
+    public static List<String> extractHeadersFromString(String relationString) {
+        List<String> headers = new ArrayList<>();
+        String[] lines = relationString.split("\n");
+
+        // La deuxième ligne contient les en-têtes
+        if (lines.length >= 2) {
+            String headerLine = lines[1];
+            String[] rawHeaders = headerLine.split("\\|");
+            for (String header : rawHeaders) {
+                header = header.trim();
+                if (!header.isEmpty()) {
+                    headers.add(header);
+                }
+            }
+        }
+        return headers;
+    }
+
+    public static String readMultiLineResponse(BufferedReader in) throws IOException {
+        StringBuilder response = new StringBuilder();
+        String line;
+        while ((line = in.readLine()) != null) {
+            if ("END_OF_RESPONSE".equals(line)) {
+                break; // Fin de la réponse détectée
+            }
+            response.append(line).append("\n");
+        }
+        return response.toString().trim(); // Supprime les espaces inutiles
+    }
+
+    public static List<List<Object>> extractDataFromString(String relationString) {
+        List<List<Object>> data = new ArrayList<>();
+        String[] lines = relationString.split("\n");
+
+        // Les données commencent après la troisième ligne
+        for (int i = 3; i < lines.length - 2; i++) {
+            String rowLine = lines[i];
+            String[] rawValues = rowLine.split("\\|");
+            List<Object> row = new ArrayList<>();
+            for (String value : rawValues) {
+                value = value.trim();
+                if (!value.isEmpty()) {
+                    // Conversion automatique si nécessaire
+                    row.add(parseValue(value));
+                }
+            }
+            data.add(row);
+        }
+        return data;
+    }
+
+    // Fonction utilitaire pour convertir une valeur en type approprié
+    private static Object parseValue(String value) {
+        try {
+            if (value.matches("-?\\d+\\.\\d+")) {
+                return Double.parseDouble(value);
+            } else if (value.matches("-?\\d+")) {
+                return Integer.parseInt(value);
+            }
+        } catch (NumberFormatException ignored) {
+        }
+        return value; // Retourne la chaîne si aucune conversion n'est possible
+    }
 
     public static Relation triage(Relation initial, String Attribut_name, String type) 
     {
@@ -198,7 +260,7 @@ public class Function {
             return sum;
         }
 
-    //AVG(Attribute)
+    // AVG(Attribute)
     public static Relation getAvg(Relation initial, String attribut_name) {
         Relation avg = new Relation();
 
@@ -211,7 +273,7 @@ public class Function {
             System.out.println("Extacting attribute: " + attribute);
 
             int index = initial.getAttributs_relations().indexOf(attribute);
-            
+
             System.out.println("Extacting attribute: " + index);
 
             double somme = 0;
@@ -241,10 +303,10 @@ public class Function {
         return avg;
     }
 
-    //MIN(Attribute) MAX(Attribute) 
-    public static Relation getMinOrMax (Relation initial, String attribut_name) {
+    // MIN(Attribute) MAX(Attribute)
+    public static Relation getMinOrMax(Relation initial, String attribut_name) {
         Relation minOrMax = new Relation();
-        
+
         try {
             double temp;
             Object remplacant;
@@ -261,10 +323,10 @@ public class Function {
             if (function.equalsIgnoreCase("MIN")) {
                 relation_name = "MIN";
                 result = Double.parseDouble(initial.getNupl().get(0).getValeurs().get(index).toString());
-            }
-            else if (function.equalsIgnoreCase("MAX")) {
-                relation_name  = "MAX";
-                result = Double.parseDouble(initial.getNupl().get(initial.getNupl().size() - 1).getValeurs().get(index).toString());
+            } else if (function.equalsIgnoreCase("MAX")) {
+                relation_name = "MAX";
+                result = Double.parseDouble(
+                        initial.getNupl().get(initial.getNupl().size() - 1).getValeurs().get(index).toString());
             }
 
             ArrayList<Object> objects = new ArrayList<>();
@@ -310,6 +372,72 @@ public class Function {
             return matcher.group(1); // Retourne le nom de la fonction
         }
         return null; // Aucune fonction trouvée
+    }
+
+    public static String showTables(String directoryPath) {
+        String result = "";
+
+        System.out.println("directoryPath: " + directoryPath);
+        try {
+
+            // Créez un objet File pour ce dossier
+            File folder = new File(directoryPath);
+            Map<String, Integer> map = new HashMap<String, Integer>();
+
+            // Vérifiez si c'est un dossier
+            if (folder.isDirectory()) {
+                // Liste les fichiers et dossiers dans le dossier
+                File[] files = folder.listFiles();
+
+                if (files != null) {
+                    result += "Tables existante(s): \n";
+                    for (File file : files) {
+
+                        if (file.isFile()) {
+
+                            // Pour supprimer les doublons exemple : exemple.schema et exemple.data
+                            // exemple iray ihany no alainy satria ny Key ao am Map tsy misy mahazo mitovy 
+                            if (!map.containsKey(removeExtension(file.getName()))) {
+                                map.put(removeExtension(file.getName()), 1);
+                            }
+
+                        }
+
+                    }
+
+                    // recuperer tous les key contenu dans la Map
+                    for (Map.Entry<String, Integer> entry : map.entrySet()) {
+                        result += "  - " + entry.getKey() + "\n";
+                    }
+
+                } else {
+                    result += "Le dossier est vide ou inaccessible.\n";
+                }
+            } else {
+                System.out.println("Le chemin spécifié n'est pas un dossier.");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    // ex : exemple.txt -> exemple
+    private static String removeExtension(String fileName) {
+
+        int lastIndex = fileName.lastIndexOf('.');
+        if (lastIndex > 0) {
+            return fileName.substring(0, lastIndex);
+        }
+
+        return fileName;
+    }
+
+    // Vérifie si un fichier ou un dossier existe
+    public static boolean exists(String path) {
+        File fileOrDirectory = new File(path);
+        return fileOrDirectory.exists();
     }
 
 }
