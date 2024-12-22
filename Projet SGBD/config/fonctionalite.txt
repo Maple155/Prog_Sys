@@ -49,3 +49,15 @@ exemple de condition : attribut "= ou > ou != ou ..." condition
 -> SELECT MAX(id) FROM test2
 -> SELECT AVG(id) FROM test2
 -> SELECT SUM(id) FROM test2
+
+11- Afficher tous les tables dans une base de données 
+
+-> SHOW tables
+
+12- Creer une base de données
+
+-> CREATE DATABASE nom_de_la_Base
+
+13- Afficher tous les bases existantes 
+
+-> SHOW DATABASES
