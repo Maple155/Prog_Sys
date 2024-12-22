@@ -58,6 +58,10 @@ exemple de condition : attribut "= ou > ou != ou ..." condition
 
 -> CREATE DATABASE nom_de_la_Base
 
-13- Afficher tous les bases existantes 
+13- Supprimer une base de données
+
+-> DROP DATABASE nom_de_la_Base
+
+14- Afficher tous les bases existantes 
 
 -> SHOW DATABASES
